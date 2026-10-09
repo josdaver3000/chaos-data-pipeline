@@ -1,0 +1,59 @@
+name: chaos-pipeline
+
+services:
+  redpanda:
+    image: docker.redpanda.com/redpandadata/redpanda:${REDPANDA_VERSION:-latest}
+    container_name: redpanda
+    command:
+      - redpanda start
+      - --kafka-addr internal://0.0.0.0:9092,external://0.0.0.0:19092
+      - --advertise-kafka-addr internal://redpanda:9092,external://localhost:19092
+      - --mode dev-container
+      - --smp 1
+      - --memory 1G
+      - --reserve-memory 0M
+      - --default-log-level=info
+    ports:
+      - "19092:19092"
+    volumes:
+      - redpanda_data:/var/lib/redpanda/data
+    mem_limit: 1536m
+    healthcheck:
+      test: ["CMD-SHELL", "rpk cluster health | grep -E 'Healthy:.+true' || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+  redpanda-console:
+    image: docker.redpanda.com/redpandadata/console:${REDPANDA_CONSOLE_VERSION:-latest}
+    container_name: redpanda-console
+    environment:
+      KAFKA_BROKERS: redpanda:9092
+    ports:
+      - "8081:8080"
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    mem_limit: 256m
+    restart: unless-stopped
+
+  s3:
+    image: pgsty/minio:${S3_VERSION:-latest}
+    container_name: s3
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${S3_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${S3_ROOT_PASSWORD}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - s3_data:/data
+    mem_limit: 512m
+    restart: unless-stopped
+
+volumes:
+  redpanda_data:
+  s3_data:
