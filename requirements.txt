@@ -2,3 +2,7 @@ faker
 confluent-kafka
 boto3
 python-dotenv
+pyyaml
+pandas
+pyarrow
+pytest

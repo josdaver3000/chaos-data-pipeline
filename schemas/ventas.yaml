@@ -1,0 +1,73 @@
+# Reglas de limpieza para el dataset "ventas" (capa silver).
+# El código de transform/clean.py NO sabe nada de ventas: solo aplica lo que diga este archivo.
+# Para otro dominio (por ejemplo hospital) se escribe otro archivo como este.
+
+dataset: ventas
+
+# Campo que identifica un evento. Los mensajes repetidos con la misma clave se eliminan.
+dedupe_key: event_id
+
+fields:
+  event_id:
+    type: string
+    required: true          # sin este campo el registro va a cuarentena
+
+  order_date:
+    type: datetime
+    required: true          # si no se entiende la fecha, el registro va a cuarentena
+    formats:                # el primero es el formato canónico; los demás se corrigen
+      - "%Y-%m-%d %H:%M:%S"
+      - "%Y/%d/%m"
+      - "%d-%m-%Y"
+      - "%d/%m/%y"
+      - "%Y.%m.%d"
+
+  customer_name:
+    type: string
+    noise: true             # quitar caracteres basura (ver noise_patterns)
+
+  email:
+    type: string
+    lowercase: true
+
+  city:
+    type: string
+    noise: true
+
+  product:
+    type: string
+
+  category:
+    type: string
+
+  quantity:
+    type: int
+    min: 1
+
+  unit_price:
+    type: int
+    min: 1
+
+  total:
+    type: int
+    min: 1
+
+  payment_method:
+    type: string
+    allowed: [tarjeta, pse, efectivo, nequi]
+
+  status:
+    type: string
+    allowed: [pagado, enviado, entregado, cancelado]
+
+# Patrones (expresiones regulares) de texto dañado que se eliminan de los campos con noise: true
+noise_patterns:
+  - 'Ã[±©¡]'
+  - '�'
+  - '\?{2,}'
+
+# Valores que se pueden reconstruir a partir de otros: total = quantity * unit_price.
+# Si falta exactamente uno de los tres, se calcula con los otros dos.
+recover:
+  - target: total
+    of: [quantity, unit_price]
