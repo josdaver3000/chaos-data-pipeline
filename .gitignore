@@ -1,6 +1,12 @@
+# Secretos
 .env
+
+# Python
 .venv/
 __pycache__/
 *.pyc
-data/
 .pytest_cache/
+
+# Datos y archivos generados
+data/
+logs/
